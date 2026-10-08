@@ -27,7 +27,6 @@
 
   var term = new Terminal({
     cursorBlink: mode === "write",
-    disableStdin: mode !== "write",
     scrollback: 5000,
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
     fontSize: 13,
@@ -37,6 +36,7 @@
   term.loadAddon(fit);
   term.open(document.getElementById("terminal"));
   fit.fit();
+  term.focus();
 
   var statusEl = document.getElementById("status");
   var statusText = document.getElementById("status-text");
@@ -106,11 +106,9 @@
     };
   }
 
-  if (mode === "write") {
-    term.onData(function (data) {
-      send({ type: "input", data: data });
-    });
-  }
+  term.onData(function (data) {
+    send({ type: "input", data: data });
+  });
 
   window.addEventListener("resize", function () {
     fit.fit();

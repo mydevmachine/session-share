@@ -21,6 +21,7 @@ import (
 	"github.com/mydevmachine/session-share/internal/app"
 	"github.com/mydevmachine/session-share/internal/eventlog"
 	"github.com/mydevmachine/session-share/internal/share"
+	"github.com/mydevmachine/session-share/internal/termio"
 	"github.com/mydevmachine/session-share/web"
 )
 
@@ -440,16 +441,20 @@ func (s *Server) serveViewer(r *http.Request, v *viewerConn, sh *share.Share) {
 			}
 			switch msg.Type {
 			case "input":
+				typed, answered := termio.Split([]byte(msg.Data))
+				if len(answered) > 0 {
+					_, _ = viewer.Write(answered)
+				}
 				current, reason, _ := s.App.Check(sh.ID)
-				if reason != "" || current == nil || current.Mode != share.ModeWrite {
+				if len(typed) == 0 || reason != "" || current == nil || current.Mode != share.ModeWrite {
 					continue
 				}
-				if err := tm.SendBytes(sh.Session, []byte(msg.Data)); err != nil {
-					_ = log.Log("tmux_error", eventlog.Fields{"conn_id": v.id, "op": "send-keys", "error": err.Error()})
+				if err := tm.SendBytes(sh.Session, typed); err != nil {
+					_ = log.Log("tmux_error", eventlog.Fields{"conn_id": v.id, "op": "paste", "error": err.Error()})
 					continue
 				}
 				inputMu.Lock()
-				inputBytes += int64(len(msg.Data))
+				inputBytes += int64(len(typed))
 				inputMu.Unlock()
 			case "resize":
 				if msg.Cols > 0 && msg.Rows > 0 && msg.Cols <= maxCols && msg.Rows <= maxRows {

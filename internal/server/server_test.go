@@ -262,10 +262,14 @@ func TestAWriteViewerTypesIntoThePane(t *testing.T) {
 	ws := e.dial(t, c, sh.ID)
 	defer ws.CloseNow()
 	readUntil(t, ws, "marker-on-screen")
+	send(t, ws, clientMessage{Type: "input", Data: "\x1b[?1;2c\x1b]11;rgb:0f0f/1111/1515\x1b\\"})
 	send(t, ws, clientMessage{Type: "input", Data: "typed-by-guest\r"})
 	eventually(t, "the input to reach the pane", func() bool {
 		return strings.Contains(e.tmux(t, "capture-pane", "-p", "-t", "=api:"), "typed-by-guest")
 	})
+	if pane := e.tmux(t, "capture-pane", "-p", "-t", "=api:"); strings.Contains(pane, "rgb:") || strings.Contains(pane, "1;2c") {
+		t.Fatalf("terminal answers reached the pane:\n%s", pane)
+	}
 	readUntil(t, ws, "typed-by-guest")
 }
 

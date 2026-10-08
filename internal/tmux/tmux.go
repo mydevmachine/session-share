@@ -162,6 +162,12 @@ func (v *Viewer) Read(p []byte) (int, error) {
 	return n, nil
 }
 
+// Write hands bytes to the read-only tmux client, which takes terminal
+// answers and ignores keys.
+func (v *Viewer) Write(p []byte) (int, error) {
+	return v.pty.Write(p)
+}
+
 func (v *Viewer) Resize(cols, rows int) error {
 	return pty.Setsize(v.pty, &pty.Winsize{Cols: uint16(cols), Rows: uint16(rows)})
 }

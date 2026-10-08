@@ -19,6 +19,7 @@ import (
 	"github.com/mydevmachine/session-share/internal/app"
 	"github.com/mydevmachine/session-share/internal/eventlog"
 	"github.com/mydevmachine/session-share/internal/share"
+	"github.com/mydevmachine/session-share/internal/termio"
 )
 
 const (
@@ -131,9 +132,12 @@ func Run(ctx context.Context, a *app.App, o Options) error {
 				end("connection closed")
 				return
 			}
-			data := buf[:n]
+			data, answered := termio.Split(buf[:n])
+			if len(answered) > 0 {
+				_, _ = viewer.Write(answered)
+			}
 			current, reason, _ := a.Check(sh.ID)
-			if reason != "" || current == nil {
+			if len(data) == 0 || reason != "" || current == nil {
 				continue
 			}
 			if current.Mode != share.ModeWrite {
@@ -148,7 +152,7 @@ func Run(ctx context.Context, a *app.App, o Options) error {
 				continue
 			}
 			typedMu.Lock()
-			typed += int64(n)
+			typed += int64(len(data))
 			typedMu.Unlock()
 		}
 	}()
