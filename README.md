@@ -43,6 +43,12 @@ would hand your keyboard to, and keep it short.
 ## Install
 
 ```sh
+brew install mydevmachine/tap/session-share
+```
+
+or
+
+```sh
 curl -fsSL https://raw.githubusercontent.com/mydevmachine/session-share/main/install.sh | bash
 ```
 

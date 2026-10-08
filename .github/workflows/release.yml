@@ -18,6 +18,19 @@ jobs:
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: go.mod
+      # The Homebrew formula lives in mydevmachine/homebrew-tap, which this
+      # workflow's own token cannot write. Without the App's secrets the
+      # release still ships, and the formula is left for a manual update.
+      - uses: actions/create-github-app-token@v2
+        id: tap-token
+        if: env.TAP_APP_ID != ''
+        env:
+          TAP_APP_ID: ${{ secrets.TAP_APP_ID }}
+        with:
+          app-id: ${{ secrets.TAP_APP_ID }}
+          private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: homebrew-tap
       - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
           distribution: goreleaser
@@ -25,3 +38,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAP_GITHUB_TOKEN: ${{ steps.tap-token.outputs.token }}

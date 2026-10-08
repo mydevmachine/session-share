@@ -40,6 +40,21 @@ changelog:
       - "^chore:"
       - "^ci:"
 
+brews:
+  - name: session-share
+    repository:
+      owner: mydevmachine
+      name: homebrew-tap
+      token: '{{ envOrDefault "TAP_GITHUB_TOKEN" "" }}'
+    skip_upload: '{{ if eq (envOrDefault "TAP_GITHUB_TOKEN" "") "" }}true{{ else }}false{{ end }}'
+    homepage: https://github.com/mydevmachine/session-share
+    description: Share a running tmux session for a limited time, in a browser or over SSH
+    license: MIT
+    dependencies:
+      - name: tmux
+    test: |
+      system "#{bin}/session-share", "version"
+
 release:
   github:
     owner: mydevmachine
