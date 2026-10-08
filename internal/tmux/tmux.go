@@ -7,14 +7,16 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/creack/pty"
 )
 
 var ErrNoSession = errors.New("no such tmux session")
+
+var bufferSeq atomic.Uint64
 
 type Tmux struct {
 	Bin    string
@@ -90,18 +92,21 @@ func (t Tmux) Version() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// SendBytes types raw bytes into the session's active pane. It goes through
-// send-keys -H, so the bytes reach the program in the pane and never the tmux
-// key tables: a guest cannot run a tmux command.
+// SendBytes types raw bytes into the session's active pane. It loads them
+// into a buffer and pastes it, so the bytes reach the program in the pane and
+// never the tmux key tables: a guest cannot run a tmux command. send-keys is
+// not an option: tmux refuses it while a read-only client is the current one.
 func (t Tmux) SendBytes(session string, data []byte) error {
 	if len(data) == 0 {
 		return nil
 	}
-	args := []string{"send-keys", "-t", pane(session), "-H"}
-	for _, b := range data {
-		args = append(args, strconv.FormatUint(uint64(b), 16))
+	buffer := fmt.Sprintf("session-share-%d-%d", os.Getpid(), bufferSeq.Add(1))
+	load := t.command("load-buffer", "-b", buffer, "-")
+	load.Stdin = bytes.NewReader(data)
+	if out, err := load.CombinedOutput(); err != nil {
+		return fmt.Errorf("tmux load-buffer: %s", strings.TrimSpace(string(out)))
 	}
-	_, err := t.run(args...)
+	_, err := t.run("paste-buffer", "-d", "-r", "-b", buffer, "-t", pane(session))
 	return err
 }
 

@@ -1,0 +1,51 @@
+{{define "head"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{.Title}} · session-share</title>
+<link rel="stylesheet" href="/assets/xterm.css">
+<link rel="stylesheet" href="/assets/app.css">
+</head>{{end}}
+
+{{define "login.html"}}{{template "head" .}}
+<body class="page">
+<main class="card">
+  <h1>{{.Title}}</h1>
+  <p class="muted">Someone shared a terminal with you. It stays open until {{.Expires}}.</p>
+  <form method="post" action="/s/{{.ID}}/login">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="off" autofocus required>
+    {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+    <button type="submit">Open</button>
+  </form>
+</main>
+</body>
+</html>{{end}}
+
+{{define "ended.html"}}{{template "head" .}}
+<body class="page">
+<main class="card">
+  <h1>{{.Title}}</h1>
+  <p>{{.Message}}</p>
+</main>
+</body>
+</html>{{end}}
+
+{{define "terminal.html"}}{{template "head" .}}
+<body class="terminal-page" data-id="{{.ID}}" data-mode="{{.Mode}}" data-expires="{{.ExpiresISO}}">
+<header class="bar">
+  <span class="title">{{.Title}}</span>
+  <span class="badge badge-{{.Mode}}">{{if eq .Mode "write"}}can type{{else}}read only{{end}}</span>
+  <span class="status" id="status"><span class="dot"></span><span id="status-text">connecting</span></span>
+  <span class="countdown" id="countdown"></span>
+  <button type="button" id="diag" class="link">Copy diagnostics</button>
+</header>
+<div id="terminal"></div>
+<div id="overlay" class="overlay" hidden><div class="card"><p id="overlay-text"></p></div></div>
+<script src="/assets/xterm.js"></script>
+<script src="/assets/addon-fit.js"></script>
+<script src="/assets/app.js"></script>
+</body>
+</html>{{end}}

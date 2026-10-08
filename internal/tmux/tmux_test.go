@@ -66,7 +66,17 @@ func TestHasSessionMatchesTheExactName(t *testing.T) {
 func TestSendBytesReachesTheProgramInThePane(t *testing.T) {
 	tm := testServer(t)
 	newSession(t, tm, "api", "cat")
-	if err := tm.SendBytes("api", []byte("hello\r")); err != nil {
+	v, err := tm.Watch("api", 80, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer v.Close()
+	go func() { _, _ = io.Copy(io.Discard, v) }()
+	eventually(t, "the read-only viewer to attach", func() bool {
+		out, _ := tm.run("list-clients")
+		return strings.TrimSpace(string(out)) != ""
+	})
+	if err := tm.SendBytes("api", []byte("hello\r\x1b[D")); err != nil {
 		t.Fatal(err)
 	}
 	eventually(t, "cat to echo hello", func() bool { return strings.Count(capture(t, tm, "api"), "hello") >= 2 })
@@ -147,6 +157,19 @@ func TestWatchPaintsTheScreenAndEndsWithTheSession(t *testing.T) {
 func TestKeepPanesSurvivesTheProgramExiting(t *testing.T) {
 	tm := testServer(t)
 	newSession(t, tm, "api", "cat")
+	v, err := tm.Watch("api", 80, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer v.Close()
+	go func() { _, _ = io.Copy(io.Discard, v) }()
+	eventually(t, "the read-only viewer to attach", func() bool {
+		out, _ := tm.run("list-clients")
+		return strings.TrimSpace(string(out)) != ""
+	})
+	if err := tm.Notify("api", "hello"); err != nil {
+		t.Fatal(err)
+	}
 	if err := tm.KeepPanes("api"); err != nil {
 		t.Fatal(err)
 	}
