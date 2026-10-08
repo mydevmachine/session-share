@@ -1,0 +1,54 @@
+internal/eventlog/eventlog.go
+  s_a78f6d7715c72b::t_91d1d92c13ea2f 1-54
+internal/sshkeys/sshkeys_test.go
+  s_a78f6d7715c72b::t_3dd96c26f60e38 1-130
+internal/share/share_test.go
+  s_a78f6d7715c72b::t_c36b117e23f867 1-133
+internal/tmux/tmux_test.go
+  s_a78f6d7715c72b::t_c295fc671d4524 88-97
+  s_a78f6d7715c72b::t_723d83b5513b92 1-74,77-87,98-156
+  s_a78f6d7715c72b::t_19dd0a414242f5 75-76
+  s_a78f6d7715c72b::t_908e5d32324ddc 157-160
+internal/eventlog/eventlog_test.go
+  s_a78f6d7715c72b::t_09bf7d8f3b609c 1-56
+internal/sshkeys/sshkeys.go
+  s_a78f6d7715c72b::t_01eb5bc553d161 1-220
+internal/share/share.go
+  s_a78f6d7715c72b::t_c948657d58bca6 1-376
+internal/tmux/tmux.go
+  s_a78f6d7715c72b::t_08aeb2ee5a28c0 1-177
+internal/app/app.go
+  s_a78f6d7715c72b::t_8346af937bdd0e 1-263
+internal/app/app_test.go
+  s_a78f6d7715c72b::t_c499cf00654cee 1-166
+.gitignore
+  s_a78f6d7715c72b::t_b991bbde40a318 1-4
+go.mod
+  s_a78f6d7715c72b::t_eb388bd304d184 1-5
+go.sum
+  s_a78f6d7715c72b::t_7ee1297c267326 1-2
+web/vendor/addon-fit.js
+  s_a78f6d7715c72b::t_3f60427d1027cd 1-2
+web/vendor/xterm-LICENSE
+  s_a78f6d7715c72b::t_da9e026f08805e 1-21
+web/vendor/xterm.css
+  s_a78f6d7715c72b::t_c4908123e8b466 1-218
+web/vendor/xterm.js
+  s_a78f6d7715c72b::t_c401166e535de3 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ca0e62a82fd14742f9960a43c700ab0151b82562",
+  "prompts": {},
+  "sessions": {
+    "s_a78f6d7715c72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aabf720b-21d5-420d-ae04-34f4cefa009d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Djalma Araujo <djalma@nossomos.cc>"
+    }
+  }
+}
