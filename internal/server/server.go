@@ -139,22 +139,10 @@ func (s *Server) load(w http.ResponseWriter, r *http.Request) (*share.Share, boo
 		return nil, false
 	}
 	if reason != "" {
-		render(w, http.StatusGone, "ended.html", pageData{Title: title(sh), Message: endedMessage(reason)})
+		render(w, http.StatusGone, "ended.html", pageData{Title: title(sh), Message: share.EndedMessage(reason)})
 		return nil, false
 	}
 	return sh, true
-}
-
-func endedMessage(reason string) string {
-	switch reason {
-	case share.ReasonExpired:
-		return "This share expired."
-	case share.ReasonRevoked:
-		return "The owner stopped sharing."
-	case share.ReasonSessionEnded:
-		return "The shared session ended."
-	}
-	return "This share has ended."
 }
 
 func (s *Server) data(sh *share.Share) pageData {
@@ -368,7 +356,7 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if reason != "" {
-		_ = ws.Close(closeCode(reason), endedMessage(reason))
+		_ = ws.Close(closeCode(reason), share.EndedMessage(reason))
 		return
 	}
 	if !authorized(r, sh) {
@@ -430,7 +418,7 @@ func (s *Server) serveViewer(r *http.Request, v *viewerConn, sh *share.Share) {
 			}
 			if err != nil {
 				if tm.HasSession(sh.Session) != nil {
-					v.end(CloseSessionEnded, endedMessage(share.ReasonSessionEnded))
+					v.end(CloseSessionEnded, share.EndedMessage(share.ReasonSessionEnded))
 				} else {
 					v.end(websocket.StatusInternalError, "The viewer stopped.")
 				}
@@ -520,11 +508,11 @@ func (s *Server) enforce() {
 	for _, v := range open {
 		_, reason, err := s.App.Check(v.shareID)
 		if err != nil {
-			v.end(CloseRevoked, endedMessage(share.ReasonRevoked))
+			v.end(CloseRevoked, share.EndedMessage(share.ReasonRevoked))
 			continue
 		}
 		if reason != "" {
-			v.end(closeCode(reason), endedMessage(reason))
+			v.end(closeCode(reason), share.EndedMessage(reason))
 		}
 	}
 }

@@ -145,6 +145,18 @@ func validate(o Options) error {
 	return nil
 }
 
+func EndedMessage(reason string) string {
+	switch reason {
+	case ReasonExpired:
+		return "This share expired."
+	case ReasonRevoked:
+		return "The owner stopped sharing."
+	case ReasonSessionEnded:
+		return "The shared session ended."
+	}
+	return "This share has ended."
+}
+
 func (s *Share) Active(now time.Time) bool {
 	return s.EndedAt == nil && now.Before(s.ExpiresAt)
 }
