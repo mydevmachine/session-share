@@ -8,6 +8,8 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -130,5 +132,40 @@ func TestStartRefusesAnUnknownCommandAndBadInput(t *testing.T) {
 		if err := c.Run(context.Background(), args); err == nil {
 			t.Errorf("%v: expected an error", args)
 		}
+	}
+}
+
+func TestListenAddressComesFromTheEnvironmentThenTheStateFile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("SESSION_SHARE_LISTEN", "")
+	if got := listenAddress(dir); got != DefaultListen {
+		t.Fatalf("got %q", got)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "listen"), []byte("127.0.0.1:7701\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := listenAddress(dir); got != "127.0.0.1:7701" {
+		t.Fatalf("got %q", got)
+	}
+	t.Setenv("SESSION_SHARE_LISTEN", "127.0.0.1:7702")
+	if got := listenAddress(dir); got != "127.0.0.1:7702" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestStartRefusesAServerOfAnotherAccount(t *testing.T) {
+	c, _, socket := newCLI(t)
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("ok uid=0\n"))
+	}))
+	defer other.Close()
+	c.Listen = strings.TrimPrefix(other.URL, "http://")
+	err := c.Run(context.Background(), []string{"start", "api", "--socket", socket})
+	if err == nil || !strings.Contains(err.Error(), "another account") {
+		t.Fatalf("got %v", err)
+	}
+	shares, _ := c.App.Store.List()
+	if len(shares) != 1 || shares[0].EndReason != share.ReasonRevoked {
+		t.Fatalf("the share must not stay active: %+v", shares)
 	}
 }

@@ -50,10 +50,7 @@ func New(version string, stdout, stderr io.Writer) (*CLI, error) {
 	if err != nil {
 		return nil, err
 	}
-	listen := os.Getenv("SESSION_SHARE_LISTEN")
-	if listen == "" {
-		listen = DefaultListen
-	}
+	listen := listenAddress(dir)
 	exe, _ := os.Executable()
 	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
 		exe = resolved
@@ -78,6 +75,20 @@ func New(version string, stdout, stderr io.Writer) (*CLI, error) {
 		Err:     stderr,
 		Version: version,
 	}, nil
+}
+
+// listenAddress lets each account on a machine run its own server: the
+// address comes from the environment, then from <state>/listen.
+func listenAddress(stateDir string) string {
+	if v := os.Getenv("SESSION_SHARE_LISTEN"); v != "" {
+		return v
+	}
+	if data, err := os.ReadFile(filepath.Join(stateDir, "listen")); err == nil {
+		if v := strings.TrimSpace(string(data)); v != "" {
+			return v
+		}
+	}
+	return DefaultListen
 }
 
 // findTmux resolves tmux to a full path. An SSH forced command runs with a
@@ -314,21 +325,32 @@ func currentUser() string {
 	return os.Getenv("USER")
 }
 
-func (c *CLI) healthy() bool {
+var errOtherAccount = errors.New("another account's session-share already listens there")
+
+// healthy reports whether this account's server answers. A server of another
+// account on the same address would publish its own shares, not ours.
+func (c *CLI) healthy() (bool, error) {
 	client := http.Client{Timeout: 500 * time.Millisecond}
 	resp, err := client.Get(expose.LocalURL(c.Listen) + "/healthz")
 	if err != nil {
-		return false
+		return false, nil
 	}
-	resp.Body.Close()
-	return resp.StatusCode == http.StatusOK
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
+	if resp.StatusCode != http.StatusOK {
+		return false, nil
+	}
+	if owner := server.HealthOwner(string(body)); owner != server.Owner() {
+		return false, fmt.Errorf("%s (%s): give this account its own address with SESSION_SHARE_LISTEN or %s", c.Listen, errOtherAccount, filepath.Join(c.App.Store.Dir, "listen"))
+	}
+	return true, nil
 }
 
 // ensureServer starts `serve` in the background when it is not running. The
 // server outlives this command and stops on its own when nothing is shared.
 func (c *CLI) ensureServer() error {
-	if c.healthy() {
-		return nil
+	if ok, err := c.healthy(); ok || err != nil {
+		return err
 	}
 	logDir := filepath.Join(c.App.Store.Dir, "logs")
 	if err := os.MkdirAll(logDir, 0o700); err != nil {
@@ -349,8 +371,8 @@ func (c *CLI) ensureServer() error {
 	_ = cmd.Process.Release()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		if c.healthy() {
-			return nil
+		if ok, err := c.healthy(); ok || err != nil {
+			return err
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -553,7 +575,7 @@ func (c *CLI) serve(ctx context.Context, args []string) error {
 	ln, err := net.Listen("tcp", *listen)
 	if err != nil {
 		c.Listen = *listen
-		if c.healthy() {
+		if ok, _ := c.healthy(); ok {
 			return nil
 		}
 		return fmt.Errorf("listening on %s: %w", *listen, err)

@@ -171,8 +171,12 @@ connection id the log uses, so the two sides can be matched.
 | Variable | Default |
 |---|---|
 | `SESSION_SHARE_HOME` | `$XDG_STATE_HOME/session-share` or `~/.local/state/session-share` |
-| `SESSION_SHARE_LISTEN` | `127.0.0.1:7690` |
+| `SESSION_SHARE_LISTEN` | the first line of `<state>/listen`, else `127.0.0.1:7690` |
 | `SESSION_SHARE_TMUX` | `tmux` on `PATH`, then the usual Homebrew, MacPorts and system paths |
+
+Every account runs its own server, so two accounts on one machine need two
+addresses. When the address answers for another account, `start` stops and
+says so instead of handing out links that would not work.
 
 ## Development
 

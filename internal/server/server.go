@@ -83,7 +83,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		_, _ = w.Write([]byte("ok\n"))
+		_, _ = fmt.Fprintf(w, "ok %s\n", Owner())
 	})
 	mux.Handle("GET /assets/", http.StripPrefix("/assets/", http.FileServerFS(web.Static())))
 	mux.HandleFunc("GET /s/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -93,6 +93,18 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /s/{id}/login", s.login)
 	mux.HandleFunc("GET /s/{id}/ws", s.socket)
 	return securityHeaders(mux)
+}
+
+func Owner() string {
+	return fmt.Sprintf("uid=%d", os.Getuid())
+}
+
+func HealthOwner(body string) string {
+	fields := strings.Fields(body)
+	if len(fields) < 2 {
+		return ""
+	}
+	return fields[1]
 }
 
 func securityHeaders(next http.Handler) http.Handler {
