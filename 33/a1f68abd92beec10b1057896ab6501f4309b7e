@@ -1,0 +1,41 @@
+internal/cli/cli.go
+  s_a78f6d7715c72b::t_3c23520cb68546 1-580
+README.md
+  s_a78f6d7715c72b::t_539abd1985fbf9 1-186
+internal/cli/cli_test.go
+  s_a78f6d7715c72b::t_57cff3c12e4210 1-134
+internal/expose/expose.go
+  s_a78f6d7715c72b::t_36e8a8679c18c0 1-202
+internal/expose/expose_test.go
+  s_a78f6d7715c72b::t_764472975155b3 1-115
+cmd/session-share/main.go
+  s_a78f6d7715c72b::t_0329cf55f3bd4c 1-22
+.github/workflows/ci.yml
+  s_a78f6d7715c72b::t_b695a3c232f2df 1-29
+.github/workflows/release.yml
+  s_a78f6d7715c72b::t_cf8f084a91176e 1-27
+.goreleaser.yaml
+  s_a78f6d7715c72b::t_5a8276eaf7492f 1-47
+LICENSE
+  s_a78f6d7715c72b::t_b9e887a7664d3c 1-21
+go.mod
+  s_a78f6d7715c72b::t_7ea02558760d5f 3
+install.sh
+  s_a78f6d7715c72b::t_f9a4ca225dc581 1-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "33a1f68abd92beec10b1057896ab6501f4309b7e",
+  "prompts": {},
+  "sessions": {
+    "s_a78f6d7715c72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aabf720b-21d5-420d-ae04-34f4cefa009d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Djalma Araujo <djalma@nossomos.cc>"
+    }
+  }
+}
