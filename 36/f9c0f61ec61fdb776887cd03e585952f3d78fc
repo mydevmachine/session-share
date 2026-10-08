@@ -1,0 +1,38 @@
+web/web.go
+  s_a78f6d7715c72b::t_2af540ba758559 1-20
+internal/server/server.go
+  s_a78f6d7715c72b::t_64b03f6bddf837 1-591,593
+  s_a78f6d7715c72b::t_f1f7d1b3efd62e 592,594-596
+web/static/app.js
+  s_a78f6d7715c72b::t_20add7e908433d 1-144
+internal/server/server_test.go
+  s_a78f6d7715c72b::t_4d46aeedcba7cd 1-387
+web/static/app.css
+  s_a78f6d7715c72b::t_f5e8bae852adab 1-97
+web/templates/layout.html
+  s_a78f6d7715c72b::t_b627ac22df8aab 1-51
+go.mod
+  s_a78f6d7715c72b::t_b2f061c499f707 6-7
+go.sum
+  s_a78f6d7715c72b::t_071a66efa90981 1-2
+internal/tmux/tmux.go
+  s_a78f6d7715c72b::t_7bc26edf4f7326 12,19-20,95-98,103-107,109
+internal/tmux/tmux_test.go
+  s_a78f6d7715c72b::t_808e982aac1c54 69-79,160-172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "36f9c0f61ec61fdb776887cd03e585952f3d78fc",
+  "prompts": {},
+  "sessions": {
+    "s_a78f6d7715c72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aabf720b-21d5-420d-ae04-34f4cefa009d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Djalma Araujo <djalma@nossomos.cc>"
+    }
+  }
+}
