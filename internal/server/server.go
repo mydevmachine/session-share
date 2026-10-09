@@ -340,6 +340,16 @@ func (s *Server) reserve(v *viewerConn, max int) bool {
 	return true
 }
 
+func (s *Server) openViewers() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := 0
+	for _, byID := range s.conns {
+		n += len(byID)
+	}
+	return n
+}
+
 func (s *Server) remove(v *viewerConn) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -397,8 +407,8 @@ func (s *Server) serveViewer(r *http.Request, v *viewerConn, sh *share.Share) {
 	record := share.Conn{ID: v.id, ShareID: sh.ID, Kind: "web", Guest: sh.Name, Remote: remote, PID: os.Getpid(), Started: started}
 	_ = s.App.Store.AddConn(record)
 	defer func() {
-		s.remove(v)
 		_ = s.App.Store.RemoveConn(sh.ID, v.id)
+		s.remove(v)
 	}()
 
 	cols, rows, err := tm.ClientSize(sh.Session)

@@ -67,6 +67,10 @@ func newEnv(t *testing.T) *env {
 		}
 	}()
 	t.Cleanup(func() {
+		deadline := time.Now().Add(5 * time.Second)
+		for e.srv.openViewers() > 0 && time.Now().Before(deadline) {
+			time.Sleep(20 * time.Millisecond)
+		}
 		cancel()
 		<-done
 		e.http.Close()
