@@ -139,6 +139,12 @@
         } else if (msg.type === "size") {
           note("size", msg.cols + "x" + msg.rows);
           useSize(msg.cols, msg.rows);
+        } else if (msg.type === "chat-history") {
+          chat.history(msg.messages || []);
+        } else if (msg.type === "chat") {
+          chat.add(msg.message);
+        } else if (msg.type === "chat-refused") {
+          chat.refused(msg.reason);
         }
         return;
       }
@@ -169,7 +175,11 @@
     send({ type: "input", data: data });
   });
 
-  window.addEventListener("resize", fitToWindow);
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () { fitToWindow(); }).observe(holder);
+  } else {
+    window.addEventListener("resize", fitToWindow);
+  }
 
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
 
@@ -193,6 +203,111 @@
       setTimeout(function () { button.textContent = "Copy diagnostics"; }, 2000);
     });
   });
+
+  var chat = (function () {
+    var box = document.getElementById("messages");
+    var form = document.getElementById("chat-form");
+    var nameInput = document.getElementById("chat-name");
+    var textInput = document.getElementById("chat-text");
+    var noteEl = document.getElementById("chat-note");
+    var unreadEl = document.getElementById("unread");
+    var panel = document.getElementById("chat");
+    var divider = document.getElementById("divider");
+    var unread = 0;
+    var sentIDs = {};
+
+    nameInput.value = load("chat.name") || "";
+    nameInput.hidden = !!nameInput.value;
+    var width = parseInt(load("chat.width"), 10);
+    if (width) panel.style.width = width + "px";
+    if (load("chat.open") === "0") document.body.classList.add("chat-hidden");
+
+    function isOpen() { return !document.body.classList.contains("chat-hidden"); }
+
+    function showUnread() {
+      unreadEl.hidden = unread === 0;
+      unreadEl.textContent = unread > 9 ? "9+" : String(unread);
+    }
+
+    document.getElementById("chat-toggle").addEventListener("click", function () {
+      document.body.classList.toggle("chat-hidden");
+      save("chat.open", isOpen() ? "1" : "0");
+      if (isOpen()) { unread = 0; showUnread(); textInput.focus(); } else { term.focus(); }
+    });
+
+    divider.addEventListener("pointerdown", function (ev) {
+      divider.setPointerCapture(ev.pointerId);
+      divider.classList.add("dragging");
+      function move(e) {
+        var w = Math.max(240, Math.min(window.innerWidth * 0.6, window.innerWidth - e.clientX));
+        panel.style.width = w + "px";
+      }
+      function up(e) {
+        divider.releasePointerCapture(e.pointerId);
+        divider.classList.remove("dragging");
+        divider.removeEventListener("pointermove", move);
+        divider.removeEventListener("pointerup", up);
+        save("chat.width", parseInt(panel.style.width, 10));
+      }
+      divider.addEventListener("pointermove", move);
+      divider.addEventListener("pointerup", up);
+    });
+
+    function clock(ts) {
+      var d = new Date(ts);
+      return (d.getHours() < 10 ? "0" : "") + d.getHours() + ":" + (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
+    }
+
+    function render(m) {
+      var el = document.createElement("div");
+      var mine = m.role === "guest" && m.from === (load("chat.name") || nameInput.value);
+      el.className = "msg " + (m.role === "owner" ? "owner" : mine ? "mine" : "guest");
+      var meta = document.createElement("span");
+      meta.className = "meta";
+      meta.textContent = (m.role === "owner" ? m.from + " (owner)" : m.from) + " · " + clock(m.ts);
+      var text = document.createElement("span");
+      text.textContent = m.text;
+      el.appendChild(meta);
+      el.appendChild(text);
+      return el;
+    }
+
+    function add(m) {
+      if (!m || !m.id) return;
+      var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+      box.appendChild(render(m));
+      if (nearBottom || sentIDs[m.text]) box.scrollTop = box.scrollHeight;
+      delete sentIDs[m.text];
+      if (!isOpen()) { unread += 1; showUnread(); }
+    }
+
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var name = nameInput.value.trim();
+      var text = textInput.value.trim();
+      if (!name) { nameInput.hidden = false; nameInput.focus(); return; }
+      if (!text) return;
+      save("chat.name", name);
+      nameInput.hidden = true;
+      sentIDs[text] = true;
+      send({ type: "chat", name: name, data: text });
+      textInput.value = "";
+      noteEl.hidden = true;
+    });
+
+    return {
+      history: function (msgs) {
+        box.textContent = "";
+        msgs.forEach(function (m) { box.appendChild(render(m)); });
+        box.scrollTop = box.scrollHeight;
+      },
+      add: add,
+      refused: function (reason) {
+        noteEl.textContent = reason || "Not sent.";
+        noteEl.hidden = false;
+      }
+    };
+  })();
 
   connect();
 })();

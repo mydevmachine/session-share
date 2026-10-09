@@ -242,6 +242,10 @@ func (st *Store) LogPath(id string) string {
 	return filepath.Join(st.Dir, "logs", id+".jsonl")
 }
 
+func (st *Store) ChatPath(id string) string {
+	return filepath.Join(st.Dir, "chats", id+".jsonl")
+}
+
 func (st *Store) Save(s *Share) error {
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
@@ -289,7 +293,7 @@ func (st *Store) Delete(id string) error {
 	if !shareID.MatchString(id) {
 		return fmt.Errorf("%w: %q", ErrNotFound, id)
 	}
-	for _, p := range []string{st.sharePath(id), st.LogPath(id)} {
+	for _, p := range []string{st.sharePath(id), st.LogPath(id), st.ChatPath(id)} {
 		if err := os.Remove(p); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("deleting %s: %w", p, err)
 		}

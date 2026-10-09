@@ -19,6 +19,7 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/mydevmachine/session-share/internal/app"
+	"github.com/mydevmachine/session-share/internal/chat"
 	"github.com/mydevmachine/session-share/internal/eventlog"
 	"github.com/mydevmachine/session-share/internal/share"
 	"github.com/mydevmachine/session-share/internal/termio"
@@ -363,9 +364,12 @@ func (s *Server) remove(v *viewerConn) {
 type clientMessage struct {
 	Type string `json:"type"`
 	Data string `json:"data"`
+	Name string `json:"name"`
 	Cols int    `json:"cols"`
 	Rows int    `json:"rows"`
 }
+
+const chatHistory = 100
 
 func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 	ws, err := websocket.Accept(w, r, nil)
@@ -434,6 +438,41 @@ func (s *Server) serveViewer(r *http.Request, v *viewerConn, sh *share.Share) {
 		v.end(websocket.StatusGoingAway, "client gone")
 	}
 
+	chatLog := s.App.Chat(sh.ID)
+	history, chatOffset, _ := chatLog.Recent(chatHistory)
+	if history == nil {
+		history = []chat.Message{}
+	}
+	if past, err := json.Marshal(map[string]any{"type": "chat-history", "messages": history}); err == nil {
+		_ = ws.Write(ctx, websocket.MessageText, past)
+	}
+	var limiter chat.Limiter
+
+	go func() {
+		offset := chatOffset
+		t := time.NewTicker(300 * time.Millisecond)
+		defer t.Stop()
+		for {
+			select {
+			case <-v.ended:
+				return
+			case <-t.C:
+				msgs, next, err := chatLog.Since(offset)
+				if err != nil {
+					continue
+				}
+				offset = next
+				for _, m := range msgs {
+					data, _ := json.Marshal(map[string]any{"type": "chat", "message": m})
+					if ws.Write(ctx, websocket.MessageText, data) != nil {
+						v.end(websocket.StatusGoingAway, "client gone")
+						return
+					}
+				}
+			}
+		}
+	}()
+
 	go func() {
 		t := time.NewTicker(s.CheckEvery)
 		defer t.Stop()
@@ -493,6 +532,18 @@ func (s *Server) serveViewer(r *http.Request, v *viewerConn, sh *share.Share) {
 				continue
 			}
 			switch msg.Type {
+			case "chat":
+				if !limiter.Allow(s.now()) {
+					refused, _ := json.Marshal(map[string]any{"type": "chat-refused", "reason": "Too fast: wait a few seconds."})
+					_ = ws.Write(ctx, websocket.MessageText, refused)
+					continue
+				}
+				m, err := chatLog.Append(msg.Name, chat.RoleGuest, msg.Data, s.now())
+				if err != nil {
+					continue
+				}
+				_ = log.Log("chat_message", eventlog.Fields{"conn_id": v.id, "from": m.From, "chars": len([]rune(m.Text))})
+				_ = tm.Notify(sh.Session, chat.TmuxText(fmt.Sprintf("session-share chat — %s: %s", m.From, m.Text)))
 			case "input":
 				typed, answered := termio.Split([]byte(msg.Data))
 				if len(answered) > 0 {

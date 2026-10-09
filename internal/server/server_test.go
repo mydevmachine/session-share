@@ -418,3 +418,74 @@ func TestServeStopsWhenNothingIsShared(t *testing.T) {
 		t.Fatal("serve kept running with nothing to share")
 	}
 }
+
+func readText(t *testing.T, ws *websocket.Conn, kind string) map[string]any {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	for {
+		typ, data, err := ws.Read(ctx)
+		if err != nil {
+			t.Fatalf("waiting for %s: %v", kind, err)
+		}
+		if typ != websocket.MessageText {
+			continue
+		}
+		var msg map[string]any
+		if json.Unmarshal(data, &msg) == nil && msg["type"] == kind {
+			return msg
+		}
+	}
+}
+
+func TestChatReachesTheGuestAndTheOwnersRepliesComeBack(t *testing.T) {
+	e := newEnv(t)
+	sh, password := e.share(t, share.ModeRead)
+	if _, err := e.app.Chat(sh.ID).Append("alice", "owner", "before you came", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	c := e.client(t)
+	e.login(t, c, sh.ID, password)
+	ws := e.dial(t, c, sh.ID)
+	defer ws.CloseNow()
+	history := readText(t, ws, "chat-history")
+	if msgs := history["messages"].([]any); len(msgs) != 1 || msgs[0].(map[string]any)["text"] != "before you came" {
+		t.Fatalf("history %v", history)
+	}
+
+	send(t, ws, clientMessage{Type: "chat", Name: "bob", Data: "hi \x1b[31mthere‮"})
+	got := readText(t, ws, "chat")["message"].(map[string]any)
+	if got["from"] != "bob" || got["role"] != "guest" || got["text"] != "hi [31mthere" {
+		t.Fatalf("guest message %v", got)
+	}
+	if _, err := e.app.Chat(sh.ID).Append("alice", "owner", "welcome", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if got := readText(t, ws, "chat")["message"].(map[string]any); got["text"] != "welcome" || got["role"] != "owner" {
+		t.Fatalf("owner message %v", got)
+	}
+	if strings.Contains(e.tmux(t, "capture-pane", "-p", "-t", "=api:"), "hi") {
+		t.Fatal("a chat message reached the shared pane")
+	}
+}
+
+func TestChatRefusesAFlood(t *testing.T) {
+	e := newEnv(t)
+	sh, password := e.share(t, share.ModeRead)
+	c := e.client(t)
+	e.login(t, c, sh.ID, password)
+	ws := e.dial(t, c, sh.ID)
+	defer ws.CloseNow()
+	readText(t, ws, "chat-history")
+	for i := 0; i < 6; i++ {
+		send(t, ws, clientMessage{Type: "chat", Name: "bob", Data: fmt.Sprintf("message %d", i)})
+	}
+	refused := readText(t, ws, "chat-refused")
+	if !strings.Contains(fmt.Sprint(refused["reason"]), "wait") {
+		t.Fatalf("refusal %v", refused)
+	}
+	msgs, _, _ := e.app.Chat(sh.ID).Since(0)
+	if len(msgs) != 5 {
+		t.Fatalf("stored %d messages, want 5", len(msgs))
+	}
+}

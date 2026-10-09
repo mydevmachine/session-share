@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mydevmachine/session-share/internal/chat"
 	"github.com/mydevmachine/session-share/internal/eventlog"
 	"github.com/mydevmachine/session-share/internal/share"
 	"github.com/mydevmachine/session-share/internal/sshkeys"
@@ -52,6 +53,10 @@ func (a *App) Tmux(s *share.Share) tmux.Tmux {
 
 func (a *App) Log(id string) *eventlog.Logger {
 	return eventlog.New(a.Store.LogPath(id), id)
+}
+
+func (a *App) Chat(id string) *chat.Log {
+	return &chat.Log{Path: a.Store.ChatPath(id)}
 }
 
 func (a *App) ServerLog() *eventlog.Logger {

@@ -169,3 +169,43 @@ func TestStartRefusesAServerOfAnotherAccount(t *testing.T) {
 		t.Fatalf("the share must not stay active: %+v", shares)
 	}
 }
+
+func TestChatSendsAsTheOwnerAndPrintsTheConversation(t *testing.T) {
+	c, out, socket := newCLI(t)
+	key := "bob=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGJvYmJvYmJvYmJvYmJvYmJvYmJvYmJvYmJvYmJvYmJv"
+	if err := c.Run(context.Background(), []string{"start", "api", "--socket", socket, "--no-web", "--ssh-key", key, "--json"}); err != nil {
+		t.Fatal(err)
+	}
+	var started struct {
+		Share shareView `json:"share"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &started); err != nil {
+		t.Fatal(err)
+	}
+	id := started.Share.ID
+	if _, err := c.App.Chat(id).Append("bob", "guest", "can you see me?", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Run(context.Background(), []string{"chat", id, "yes,", "loud", "and", "clear"}); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if err := c.Run(context.Background(), []string{"chat", id, "--json"}); err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Version  int `json:"version"`
+		Messages []struct {
+			From, Role, Text string
+		} `json:"messages"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if got.Version != JSONVersion || len(got.Messages) != 2 || got.Messages[1].Role != "owner" || got.Messages[1].Text != "yes, loud and clear" {
+		t.Fatalf("got %+v", got)
+	}
+	if err := c.Run(context.Background(), []string{"chat", "zzzzzzzzzzzz", "hi"}); err == nil {
+		t.Fatal("chat on a share that does not exist must fail")
+	}
+}

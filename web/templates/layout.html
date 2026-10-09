@@ -47,9 +47,24 @@
     <button type="button" class="chip" id="zoom-out" title="Smaller" aria-label="Smaller">−</button>
     <button type="button" class="chip" id="zoom-in" title="Bigger" aria-label="Bigger">+</button>
   </span>
+  <button type="button" class="chip" id="chat-toggle" title="Show or hide the chat">Chat <span id="unread" class="unread" hidden></span></button>
   <button type="button" id="diag" class="link">Copy diagnostics</button>
 </header>
-<div id="terminal"><div id="stage"></div></div>
+<div id="main">
+  <div id="terminal"><div id="stage"></div></div>
+  <div id="divider" title="Drag to resize the chat"></div>
+  <aside id="chat">
+    <div id="messages" aria-live="polite"></div>
+    <p id="chat-note" class="note" hidden></p>
+    <form id="chat-form" autocomplete="off">
+      <input id="chat-name" maxlength="32" placeholder="Your name" required>
+      <div class="chat-row">
+        <input id="chat-text" maxlength="500" placeholder="Message" required>
+        <button type="submit" class="send" aria-label="Send">➤</button>
+      </div>
+    </form>
+  </aside>
+</div>
 <div id="overlay" class="overlay" hidden><div class="card"><p id="overlay-text"></p></div></div>
 <script src="/assets/xterm.js"></script>
 <script src="/assets/app.js"></script>

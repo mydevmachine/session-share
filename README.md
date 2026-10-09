@@ -91,6 +91,23 @@ screen, Width fills the width and scrolls down, 100% is the actual size,
 and − / + zoom on top of any of them. The choice stays in their browser. Send the password through a
 different channel than the link.
 
+### Chat
+
+Beside the session, the page has a chat. The guest types a name once and
+writes; you answer from the terminal, and each guest message also shows in
+your tmux status line:
+
+```sh
+session-share chat k3j2abcdwxyz "I'll push the fix now"
+session-share chat k3j2abcdwxyz --follow     # read along
+```
+
+Chat is text only, up to 500 characters: control characters, escape
+sequences and invisible or direction-changing characters are removed, the
+page shows it as text, never as HTML, and a guest can send five messages in
+five seconds. Nothing typed in the chat reaches the session. The
+conversation is kept with the share and forgotten with it.
+
 ### Over SSH
 
 ```sh
@@ -130,6 +147,7 @@ A share also ends when its tmux session does.
 | `stop <id>` | End a share now. |
 | `extend <id> --for 30m` | Move the deadline. |
 | `logs <id> [--follow]` | The share's event log. |
+| `chat <id> [message] [--follow]` | Answer the guests, or read the chat. |
 | `expose [status\|funnel\|proxy --url URL\|off]` | Publish the web server. |
 | `serve` | The web server. `start` runs it for you; it stops when nothing is shared. |
 | `attach <id> --guest <name>` | What an SSH guest's key runs. |

@@ -21,6 +21,7 @@ import (
 
 	"github.com/mydevmachine/session-share/internal/app"
 	"github.com/mydevmachine/session-share/internal/attach"
+	"github.com/mydevmachine/session-share/internal/chat"
 	"github.com/mydevmachine/session-share/internal/expose"
 	"github.com/mydevmachine/session-share/internal/server"
 	"github.com/mydevmachine/session-share/internal/share"
@@ -119,6 +120,7 @@ Usage:
   session-share stop <id> [--json]
   session-share extend <id> --for 30m [--json]
   session-share logs <id> [--follow]
+  session-share chat <id> [message] [--follow] [--json]
   session-share expose [status|proxy --url URL|funnel|off] [--json]
   session-share serve [--listen 127.0.0.1:7690]
   session-share attach <id> --guest <name>     (the command an SSH guest's key runs)
@@ -143,6 +145,8 @@ func (c *CLI) Run(ctx context.Context, args []string) error {
 		return c.extend(rest)
 	case "logs":
 		return c.logs(ctx, rest)
+	case "chat":
+		return c.chat(ctx, rest)
 	case "expose":
 		return c.expose(rest)
 	case "serve":
@@ -502,6 +506,66 @@ func (c *CLI) logs(ctx context.Context, args []string) error {
 			return fmt.Errorf("reading the log: %w", err)
 		}
 	}
+}
+
+// chat sends a message as the owner, or prints the conversation. The share
+// server tails the same file, so a guest sees an owner message within a
+// moment, whichever process wrote it.
+func (c *CLI) chat(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("chat", flag.ContinueOnError)
+	follow := fs.Bool("follow", false, "keep printing new messages")
+	asJSON := fs.Bool("json", false, "machine-readable output")
+	pos, err := parse(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) < 1 {
+		return errors.New("usage: session-share chat <id> [message] [--follow] [--json]")
+	}
+	if _, err := c.App.Store.Load(pos[0]); err != nil {
+		return err
+	}
+	log := c.App.Chat(pos[0])
+	if len(pos) > 1 {
+		m, err := log.Append(currentUser(), chat.RoleOwner, strings.Join(pos[1:], " "), time.Now())
+		if err != nil {
+			return err
+		}
+		if *asJSON {
+			return c.printJSON(map[string]any{"message": m})
+		}
+		return nil
+	}
+	msgs, offset, err := log.Recent(500)
+	if err != nil {
+		return err
+	}
+	if *asJSON {
+		if msgs == nil {
+			msgs = []chat.Message{}
+		}
+		return c.printJSON(map[string]any{"messages": msgs})
+	}
+	print := func(ms []chat.Message) {
+		for _, m := range ms {
+			fmt.Fprintf(c.Out, "%s  %s: %s\n", m.TS.Local().Format("15:04"), m.From, m.Text)
+		}
+	}
+	print(msgs)
+	for *follow {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(500 * time.Millisecond):
+		}
+		next, n, err := log.Since(offset)
+		if err != nil {
+			return err
+		}
+		offset = n
+		print(next)
+	}
+	return nil
 }
 
 func (c *CLI) expose(args []string) error {
