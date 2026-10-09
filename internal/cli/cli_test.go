@@ -209,3 +209,41 @@ func TestChatSendsAsTheOwnerAndPrintsTheConversation(t *testing.T) {
 		t.Fatal("chat on a share that does not exist must fail")
 	}
 }
+
+func TestChatFollowJSONIsOneLinePerMessage(t *testing.T) {
+	c, out, socket := newCLI(t)
+	key := "bob=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGJvYmJvYmJvYmJvYmJvYmJvYmJvYmJvYmJvYmJvYmJv"
+	if err := c.Run(context.Background(), []string{"start", "api", "--socket", socket, "--no-web", "--ssh-key", key, "--json"}); err != nil {
+		t.Fatal(err)
+	}
+	var started struct {
+		Share shareView `json:"share"`
+	}
+	_ = json.Unmarshal(out.Bytes(), &started)
+	id := started.Share.ID
+	_, _ = c.App.Chat(id).Append("bob", "guest", "first", time.Now())
+	out.Reset()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- c.Run(ctx, []string{"chat", id, "--follow", "--json"}) }()
+	time.Sleep(200 * time.Millisecond)
+	_, _ = c.App.Chat(id).Append("bob", "guest", "second", time.Now())
+	time.Sleep(900 * time.Millisecond)
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("got %d lines: %q", len(lines), out.String())
+	}
+	for i, want := range []string{"first", "second"} {
+		var line struct {
+			Version int
+			Message struct{ Text string }
+		}
+		if err := json.Unmarshal([]byte(lines[i]), &line); err != nil || line.Version != JSONVersion || line.Message.Text != want {
+			t.Fatalf("line %d %q: %v", i, lines[i], err)
+		}
+	}
+}

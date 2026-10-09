@@ -540,14 +540,21 @@ func (c *CLI) chat(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	if *asJSON {
+	if *asJSON && !*follow {
 		if msgs == nil {
 			msgs = []chat.Message{}
 		}
 		return c.printJSON(map[string]any{"messages": msgs})
 	}
+	// With --follow and --json, every message is one line of JSON, so a
+	// program reading the stream can act on each one as it arrives.
+	enc := json.NewEncoder(c.Out)
 	print := func(ms []chat.Message) {
 		for _, m := range ms {
+			if *asJSON {
+				_ = enc.Encode(map[string]any{"version": JSONVersion, "message": m})
+				continue
+			}
 			fmt.Fprintf(c.Out, "%s  %s: %s\n", m.TS.Local().Format("15:04"), m.From, m.Text)
 		}
 	}
