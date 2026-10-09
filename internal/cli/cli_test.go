@@ -205,6 +205,12 @@ func TestChatSendsAsTheOwnerAndPrintsTheConversation(t *testing.T) {
 	if got.Version != JSONVersion || len(got.Messages) != 2 || got.Messages[1].Role != "owner" || got.Messages[1].Text != "yes, loud and clear" {
 		t.Fatalf("got %+v", got)
 	}
+	if err := c.Run(context.Background(), []string{"chat", id, "--message", "-rf / is not a flag here"}); err != nil {
+		t.Fatal(err)
+	}
+	if msgs, _, _ := c.App.Chat(id).Recent(10); msgs[len(msgs)-1].Text != "-rf / is not a flag here" {
+		t.Fatalf("last message %+v", msgs[len(msgs)-1])
+	}
 	if err := c.Run(context.Background(), []string{"chat", "zzzzzzzzzzzz", "hi"}); err == nil {
 		t.Fatal("chat on a share that does not exist must fail")
 	}

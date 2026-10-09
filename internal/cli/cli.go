@@ -120,7 +120,7 @@ Usage:
   session-share stop <id> [--json]
   session-share extend <id> --for 30m [--json]
   session-share logs <id> [--follow]
-  session-share chat <id> [message] [--follow] [--json]
+  session-share chat <id> [message] [--message text] [--follow] [--json]
   session-share expose [status|proxy --url URL|funnel|off] [--json]
   session-share serve [--listen 127.0.0.1:7690]
   session-share attach <id> --guest <name>     (the command an SSH guest's key runs)
@@ -515,12 +515,16 @@ func (c *CLI) chat(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("chat", flag.ContinueOnError)
 	follow := fs.Bool("follow", false, "keep printing new messages")
 	asJSON := fs.Bool("json", false, "machine-readable output")
+	message := fs.String("message", "", "the message to send; any text, even one that starts with -")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) < 1 {
-		return errors.New("usage: session-share chat <id> [message] [--follow] [--json]")
+		return errors.New("usage: session-share chat <id> [message] [--message text] [--follow] [--json]")
+	}
+	if *message != "" {
+		pos = append(pos[:1], *message)
 	}
 	if _, err := c.App.Store.Load(pos[0]); err != nil {
 		return err
