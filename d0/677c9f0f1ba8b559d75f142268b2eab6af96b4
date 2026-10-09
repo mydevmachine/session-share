@@ -1,0 +1,21 @@
+internal/server/server.go
+  s_a78f6d7715c72b::t_ad628052f588c1 343-352,411
+internal/server/server_test.go
+  s_a78f6d7715c72b::t_3c7e7005edc54d 70-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d0677c9f0f1ba8b559d75f142268b2eab6af96b4",
+  "prompts": {},
+  "sessions": {
+    "s_a78f6d7715c72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aabf720b-21d5-420d-ae04-34f4cefa009d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Djalma Araujo <djalma@nossomos.cc>"
+    }
+  }
+}
