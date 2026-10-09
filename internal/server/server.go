@@ -341,6 +341,13 @@ func (s *Server) reserve(v *viewerConn, max int) bool {
 	return true
 }
 
+func viewerLimitMessage(max int) string {
+	if max == 1 {
+		return "Someone is already watching, and this share allows one person at a time."
+	}
+	return fmt.Sprintf("This share allows %d people at a time, and %d are here already.", max, max)
+}
+
 func (s *Server) openViewers() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -394,7 +401,7 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 	v := &viewerConn{id: newConnID(), shareID: sh.ID, ws: ws, ended: make(chan struct{})}
 	if !s.reserve(v, sh.MaxViewers) {
 		_ = s.App.Log(sh.ID).Log("viewer_refused", eventlog.Fields{"remote": remoteAddr(r), "reason": "viewer limit", "max_viewers": sh.MaxViewers})
-		_ = ws.Close(CloseTooManyViewer, "Someone is already watching, and this share allows only one viewer.")
+		_ = ws.Close(CloseTooManyViewer, viewerLimitMessage(sh.MaxViewers))
 		return
 	}
 	s.serveViewer(r, v, sh)

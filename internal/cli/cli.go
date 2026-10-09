@@ -115,7 +115,7 @@ limited time, in a browser or over SSH.
 Usage:
   session-share start <session> [--mode read|write] [--for 1h] [--name label]
                       [--ssh-github user]... [--ssh-key name=KEY]... [--no-web]
-                      [--max-viewers 1] [--socket name] [--json]
+                      [--max-viewers 5] [--socket name] [--json]
   session-share list [--all] [--json]
   session-share stop <id> [--json]
   session-share extend <id> --for 30m [--json]
@@ -252,7 +252,7 @@ func (c *CLI) start(ctx context.Context, args []string) error {
 	dur := fs.Duration("for", time.Hour, "how long the share lasts")
 	name := fs.String("name", "", "a label for the share")
 	noWeb := fs.Bool("no-web", false, "SSH guests only, no web link")
-	maxViewers := fs.Int("max-viewers", 1, "web viewers at the same time")
+	maxViewers := fs.Int("max-viewers", share.DefaultMaxViewers, "people in the browser at the same time")
 	socket := fs.String("socket", "", "tmux socket name (tmux -L)")
 	asJSON := fs.Bool("json", false, "machine-readable output")
 	var githubUsers, keys stringList

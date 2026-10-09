@@ -11,7 +11,7 @@
     4002: "The owner stopped sharing.",
     4003: "The shared session ended.",
     4004: "You are not signed in to this share. Reload the page.",
-    4005: "Someone is already watching, and this share allows only one viewer."
+    4005: "This share is full: the owner set how many people can be here at a time."
   };
 
   var events = [];
@@ -155,6 +155,7 @@
       note("close", ev.code + " " + (ev.reason || ""));
       if (FINAL[ev.code]) {
         finished = true;
+        document.querySelectorAll("#chat-form input, #chat-form button").forEach(function (el) { el.disabled = true; });
         setStatus("bad", "closed");
         showOverlay(ev.reason || FINAL[ev.code]);
         return;

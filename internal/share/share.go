@@ -31,6 +31,10 @@ const (
 	ReasonSessionEnded = "session-ended"
 )
 
+// DefaultMaxViewers leaves room for a small group in the chat, and still
+// keeps a leaked link from filling the server.
+const DefaultMaxViewers = 5
+
 const (
 	MinDuration = time.Minute
 	MaxDuration = 24 * time.Hour
@@ -86,7 +90,7 @@ func New(o Options, now time.Time) (*Share, string, error) {
 		return nil, "", err
 	}
 	if o.MaxViewers <= 0 {
-		o.MaxViewers = 1
+		o.MaxViewers = DefaultMaxViewers
 	}
 	s := &Share{
 		ID:         id,

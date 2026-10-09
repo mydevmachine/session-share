@@ -283,17 +283,39 @@ func TestAWriteViewerTypesIntoThePane(t *testing.T) {
 	readUntil(t, ws, "typed-by-guest")
 }
 
-func TestASecondViewerIsRefusedByDefault(t *testing.T) {
+func TestSeveralPeopleCanWatchUpToTheLimit(t *testing.T) {
 	e := newEnv(t)
 	sh, password := e.share(t, share.ModeRead)
+	if sh.MaxViewers != share.DefaultMaxViewers || share.DefaultMaxViewers < 2 {
+		t.Fatalf("default max viewers %d: a chat needs room for more than one person", sh.MaxViewers)
+	}
+	sh.MaxViewers = 2
+	if err := e.app.Store.Save(sh); err != nil {
+		t.Fatal(err)
+	}
+	var open []*websocket.Conn
+	for i := 0; i < 2; i++ {
+		c := e.client(t)
+		e.login(t, c, sh.ID, password)
+		ws := e.dial(t, c, sh.ID)
+		defer ws.CloseNow()
+		readUntil(t, ws, "marker-on-screen")
+		open = append(open, ws)
+	}
 	c := e.client(t)
 	e.login(t, c, sh.ID, password)
-	first := e.dial(t, c, sh.ID)
-	defer first.CloseNow()
-	readUntil(t, first, "marker-on-screen")
-	second := e.dial(t, c, sh.ID)
-	if got := closeStatus(t, second); got != CloseTooManyViewer {
-		t.Fatalf("close %d, want %d", got, CloseTooManyViewer)
+	third := e.dial(t, c, sh.ID)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var err error
+	for err == nil {
+		_, _, err = third.Read(ctx)
+	}
+	if websocket.CloseStatus(err) != CloseTooManyViewer {
+		t.Fatalf("third viewer: %v", err)
+	}
+	if !strings.Contains(err.Error(), "2 people at a time") {
+		t.Fatalf("reason %q should name the limit", err)
 	}
 }
 

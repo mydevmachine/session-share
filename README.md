@@ -142,7 +142,7 @@ A share also ends when its tmux session does.
 
 | Command | What it does |
 |---|---|
-| `start <session>` | Share a session. `--mode read\|write` (read), `--for` (1h), `--name`, `--ssh-github`, `--ssh-key name=KEY`, `--no-web`, `--max-viewers` (1), `--socket` (tmux `-L`) |
+| `start <session>` | Share a session. `--mode read\|write` (read), `--for` (1h), `--name`, `--ssh-github`, `--ssh-key name=KEY`, `--no-web`, `--max-viewers` (5), `--socket` (tmux `-L`) |
 | `list` | Active shares and who is connected. `--all` includes ended ones. |
 | `stop <id>` | End a share now. |
 | `extend <id> --for 30m` | Move the deadline. |
@@ -176,7 +176,7 @@ connection id the log uses, so the two sides can be matched.
 | 4002 | The owner ran `stop`. |
 | 4003 | The tmux session ended. |
 | 4004 | No valid sign-in: the cookie is missing or belongs to another share. Reload and sign in. |
-| 4005 | The share allows a set number of browser viewers (`--max-viewers`, 1 by default), and that many are connected. |
+| 4005 | The share allows a set number of browser viewers (`--max-viewers`, 5 by default), and that many are connected. |
 | 1001 | The browser left, or the server shut down. The page reconnects. |
 | 1006 | The network dropped. The page reconnects with growing waits. |
 
