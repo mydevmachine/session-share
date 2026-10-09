@@ -77,7 +77,15 @@ button.link:hover { color: var(--text); }
 
 .countdown { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-#terminal { flex: 1; min-height: 0; padding: 4px; overflow: hidden; }
+#terminal { flex: 1; min-height: 0; padding: 4px; overflow: hidden; display: flex; }
+#terminal.scrolls { overflow: auto; }
+#stage { position: relative; margin: auto; flex: none; }
+#stage .xterm { position: absolute; top: 0; left: 0; transform-origin: top left; }
+
+.view { display: flex; gap: 2px; }
+.chip { margin: 0; padding: 2px 8px; border-radius: 6px; background: none; color: var(--muted); font-size: 12px; }
+.chip:hover { color: var(--text); background: #232834; }
+.chip.on { color: var(--text); background: #2a3040; }
 #terminal .xterm-viewport { overflow-y: hidden !important; }
 
 .overlay {
@@ -94,5 +102,5 @@ button.link:hover { color: var(--text); }
 
 @media (max-width: 600px) {
   .bar { gap: 8px; }
-  #diag { display: none; }
+  #diag, .countdown { display: none; }
 }

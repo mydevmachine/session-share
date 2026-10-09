@@ -85,7 +85,10 @@ session-share expose off
 
 The route is set once: every share lives under `/s/<id>/` on the same host.
 
-The guest opens the link and types the password. Send the password through a
+The guest opens the link and types the password. They see the shared
+window at its own size, scaled to their browser: Fit shows the whole
+screen, Width fills the width and scrolls down, 100% is the actual size,
+and − / + zoom on top of any of them. The choice stays in their browser. Send the password through a
 different channel than the link.
 
 ### Over SSH

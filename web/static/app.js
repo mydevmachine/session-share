@@ -33,25 +33,64 @@
     theme: { background: "#0f1115" }
   });
   var holder = document.getElementById("terminal");
-  term.open(holder);
+  var stage = document.getElementById("stage");
+  term.open(stage);
   term.focus();
+
+  function load(key) {
+    try { return localStorage.getItem("session-share." + key); } catch (e) { return null; }
+  }
+  function save(key, value) {
+    try { localStorage.setItem("session-share." + key, value); } catch (e) {}
+  }
+
+  var view = load("view") || "fit";
+  var zoom = parseFloat(load("zoom")) || 1;
 
   // The guest sees the shared window at its own size, never more or fewer
   // columns: tmux fills a bigger client with dots and cuts a smaller one.
-  // The terminal is scaled to fit the browser instead.
+  // The terminal is scaled instead: the whole screen, the full width, or its
+  // actual size, times the guest's own zoom.
   function fitToWindow() {
     var el = term.element;
     var screen = el && el.querySelector(".xterm-screen");
     if (!screen) return;
-    el.style.transform = "none";
     var width = screen.offsetWidth, height = screen.offsetHeight;
     if (!width || !height) return;
+    var room = { w: holder.clientWidth - 8, h: holder.clientHeight - 8 };
+    var base = view === "width" ? room.w / width
+      : view === "actual" ? 1
+      : Math.min(room.w / width, room.h / height);
+    var scale = Math.max(0.25, Math.min(4, base * zoom));
     el.style.width = width + "px";
     el.style.height = height + "px";
-    var scale = Math.min(holder.clientWidth / width, holder.clientHeight / height, 2.5);
-    el.style.transformOrigin = "top left";
     el.style.transform = "scale(" + scale + ")";
+    stage.style.width = Math.floor(width * scale) + "px";
+    stage.style.height = Math.floor(height * scale) + "px";
+    holder.classList.toggle("scrolls", width * scale > room.w + 1 || height * scale > room.h + 1);
+    document.querySelectorAll("[data-view]").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.view === view);
+    });
   }
+
+  document.querySelectorAll("[data-view]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      view = button.dataset.view;
+      zoom = 1;
+      save("view", view);
+      save("zoom", zoom);
+      fitToWindow();
+      term.focus();
+    });
+  });
+  function step(factor) {
+    zoom = Math.max(0.25, Math.min(4, zoom * factor));
+    save("zoom", zoom);
+    fitToWindow();
+    term.focus();
+  }
+  document.getElementById("zoom-in").addEventListener("click", function () { step(1.1); });
+  document.getElementById("zoom-out").addEventListener("click", function () { step(1 / 1.1); });
 
   function useSize(cols, rows) {
     if (!cols || !rows) return;

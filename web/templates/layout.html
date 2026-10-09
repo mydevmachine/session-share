@@ -40,9 +40,16 @@
   <span class="badge badge-{{.Mode}}">{{if eq .Mode "write"}}can type{{else}}read only{{end}}</span>
   <span class="status" id="status"><span class="dot"></span><span id="status-text">connecting</span></span>
   <span class="countdown" id="countdown"></span>
+  <span class="view" role="group" aria-label="Size">
+    <button type="button" class="chip" data-view="fit" title="Show the whole screen">Fit</button>
+    <button type="button" class="chip" data-view="width" title="Fill the width, scroll down">Width</button>
+    <button type="button" class="chip" data-view="actual" title="Actual size, scroll both ways">100%</button>
+    <button type="button" class="chip" id="zoom-out" title="Smaller" aria-label="Smaller">−</button>
+    <button type="button" class="chip" id="zoom-in" title="Bigger" aria-label="Bigger">+</button>
+  </span>
   <button type="button" id="diag" class="link">Copy diagnostics</button>
 </header>
-<div id="terminal"></div>
+<div id="terminal"><div id="stage"></div></div>
 <div id="overlay" class="overlay" hidden><div class="card"><p id="overlay-text"></p></div></div>
 <script src="/assets/xterm.js"></script>
 <script src="/assets/app.js"></script>
