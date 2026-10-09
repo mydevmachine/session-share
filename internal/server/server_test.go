@@ -197,8 +197,14 @@ func TestThePageAsksForThePasswordFirst(t *testing.T) {
 	if !strings.Contains(string(body), `name="password"`) || strings.Contains(string(body), "xterm.js") {
 		t.Fatalf("expected the login form only:\n%s", body)
 	}
-	if got := resp.Header.Get("Content-Security-Policy"); !strings.Contains(got, "frame-ancestors 'none'") {
-		t.Fatalf("CSP %q", got)
+	csp := resp.Header.Get("Content-Security-Policy")
+	for _, want := range []string{"frame-ancestors 'none'", "style-src 'self' 'unsafe-inline'", "default-src 'self'"} {
+		if !strings.Contains(csp, want) {
+			t.Fatalf("CSP %q lacks %q", csp, want)
+		}
+	}
+	if strings.Contains(csp, "script-src") {
+		t.Fatalf("CSP %q must leave scripts to default-src 'self'", csp)
 	}
 	if r := e.login(t, c, sh.ID, "wrong"); r.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("wrong password: %d", r.StatusCode)

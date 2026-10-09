@@ -108,7 +108,10 @@ func HealthOwner(body string) string {
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
-		h.Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; connect-src 'self' ws://%[1]s wss://%[1]s; frame-ancestors 'none'; base-uri 'none'; form-action 'self'", r.Host))
+		// xterm.js paints colours from <style> elements it writes at run time;
+		// without 'unsafe-inline' for styles every program shows in one colour.
+		// Scripts stay limited to this server's own files.
+		h.Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://%[1]s wss://%[1]s; frame-ancestors 'none'; base-uri 'none'; form-action 'self'", r.Host))
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "no-referrer")
 		h.Set("Cache-Control", "no-store")
