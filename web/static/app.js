@@ -32,11 +32,32 @@
     fontSize: 13,
     theme: { background: "#0f1115" }
   });
-  var fit = new FitAddon.FitAddon();
-  term.loadAddon(fit);
-  term.open(document.getElementById("terminal"));
-  fit.fit();
+  var holder = document.getElementById("terminal");
+  term.open(holder);
   term.focus();
+
+  // The guest sees the shared window at its own size, never more or fewer
+  // columns: tmux fills a bigger client with dots and cuts a smaller one.
+  // The terminal is scaled to fit the browser instead.
+  function fitToWindow() {
+    var el = term.element;
+    var screen = el && el.querySelector(".xterm-screen");
+    if (!screen) return;
+    el.style.transform = "none";
+    var width = screen.offsetWidth, height = screen.offsetHeight;
+    if (!width || !height) return;
+    el.style.width = width + "px";
+    el.style.height = height + "px";
+    var scale = Math.min(holder.clientWidth / width, holder.clientHeight / height, 2.5);
+    el.style.transformOrigin = "top left";
+    el.style.transform = "scale(" + scale + ")";
+  }
+
+  function useSize(cols, rows) {
+    if (!cols || !rows) return;
+    if (term.cols !== cols || term.rows !== rows) term.resize(cols, rows);
+    requestAnimationFrame(fitToWindow);
+  }
 
   var statusEl = document.getElementById("status");
   var statusText = document.getElementById("status-text");
@@ -55,10 +76,6 @@
     if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg));
   }
 
-  function sendSize() {
-    send({ type: "resize", cols: term.cols, rows: term.rows });
-  }
-
   function connect() {
     var scheme = location.protocol === "https:" ? "wss://" : "ws://";
     socket = new WebSocket(scheme + location.host + "/s/" + shareID + "/ws");
@@ -70,7 +87,6 @@
       attempt = 0;
       setStatus("ok", "live");
       note("open");
-      sendSize();
     };
 
     socket.onmessage = function (ev) {
@@ -80,6 +96,10 @@
           connID = msg.conn_id;
           expires = new Date(msg.expires_at);
           note("hello", connID);
+          useSize(msg.cols, msg.rows);
+        } else if (msg.type === "size") {
+          note("size", msg.cols + "x" + msg.rows);
+          useSize(msg.cols, msg.rows);
         }
         return;
       }
@@ -110,10 +130,7 @@
     send({ type: "input", data: data });
   });
 
-  window.addEventListener("resize", function () {
-    fit.fit();
-    sendSize();
-  });
+  window.addEventListener("resize", fitToWindow);
 
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
 

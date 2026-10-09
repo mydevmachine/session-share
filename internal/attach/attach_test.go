@@ -153,6 +153,17 @@ func TestAReadOnlyGuestWatchesAndLeavesWithQ(t *testing.T) {
 	}
 }
 
+func TestAGuestTerminalBiggerThanTheWindowGetsTheWindowsSize(t *testing.T) {
+	e := newEnv(t)
+	sh := e.share(t, share.ModeRead)
+	g, _ := e.attach(t, sh, "bob")
+	eventually(t, "the screen", func() bool { return strings.Contains(g.output(), "marker-on-screen") })
+	out, _ := exec.Command("tmux", "-L", e.socket, "list-clients", "-F", "#{client_width}x#{client_height}").CombinedOutput()
+	if got := strings.TrimSpace(string(out)); got != "80x25" {
+		t.Fatalf("a 100x30 guest got a %s client, want the 80x24 window plus its status line", got)
+	}
+}
+
 func TestAWriteGuestTypesIntoThePane(t *testing.T) {
 	e := newEnv(t)
 	sh := e.share(t, share.ModeWrite)

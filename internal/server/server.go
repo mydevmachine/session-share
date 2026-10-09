@@ -35,8 +35,6 @@ const (
 
 const (
 	maxMessage   = 64 * 1024
-	maxCols      = 500
-	maxRows      = 200
 	failLimit    = 5
 	failWindow   = 10 * time.Minute
 	lockDuration = 10 * time.Minute
@@ -400,7 +398,11 @@ func (s *Server) serveViewer(r *http.Request, v *viewerConn, sh *share.Share) {
 		_ = s.App.Store.RemoveConn(sh.ID, v.id)
 	}()
 
-	viewer, err := tm.Watch(sh.Session, 80, 24)
+	cols, rows, err := tm.ClientSize(sh.Session)
+	if err != nil {
+		cols, rows = 80, 24
+	}
+	viewer, err := tm.Watch(sh.Session, cols, rows)
 	if err != nil {
 		_ = log.Log("tmux_error", eventlog.Fields{"conn_id": v.id, "op": "attach", "error": err.Error()})
 		_ = ws.Close(websocket.StatusInternalError, "Could not attach to the session.")
@@ -411,10 +413,36 @@ func (s *Server) serveViewer(r *http.Request, v *viewerConn, sh *share.Share) {
 	_ = log.Log("viewer_joined", eventlog.Fields{"conn_id": v.id, "kind": "web", "remote": remote, "user_agent": r.UserAgent(), "mode": sh.Mode})
 	_ = tm.Notify(sh.Session, fmt.Sprintf("session-share: a web viewer joined (%s, %s)", sh.Mode, remote))
 
-	hello, _ := json.Marshal(map[string]any{"type": "hello", "conn_id": v.id, "mode": sh.Mode, "expires_at": sh.ExpiresAt, "session": sh.Session})
+	hello, _ := json.Marshal(map[string]any{
+		"type": "hello", "conn_id": v.id, "mode": sh.Mode, "expires_at": sh.ExpiresAt, "session": sh.Session,
+		"cols": cols, "rows": rows,
+	})
 	if err := ws.Write(ctx, websocket.MessageText, hello); err != nil {
 		v.end(websocket.StatusGoingAway, "client gone")
 	}
+
+	go func() {
+		t := time.NewTicker(s.CheckEvery)
+		defer t.Stop()
+		for {
+			select {
+			case <-v.ended:
+				return
+			case <-t.C:
+				c, r, err := tm.ClientSize(sh.Session)
+				if err != nil || (c == cols && r == rows) {
+					continue
+				}
+				cols, rows = c, r
+				_ = viewer.Resize(cols, rows)
+				size, _ := json.Marshal(map[string]any{"type": "size", "cols": cols, "rows": rows})
+				if ws.Write(ctx, websocket.MessageText, size) != nil {
+					v.end(websocket.StatusGoingAway, "client gone")
+					return
+				}
+			}
+		}
+	}()
 
 	var inputBytes int64
 	var inputMu sync.Mutex
@@ -468,10 +496,6 @@ func (s *Server) serveViewer(r *http.Request, v *viewerConn, sh *share.Share) {
 				inputMu.Lock()
 				inputBytes += int64(len(typed))
 				inputMu.Unlock()
-			case "resize":
-				if msg.Cols > 0 && msg.Rows > 0 && msg.Cols <= maxCols && msg.Rows <= maxRows {
-					_ = viewer.Resize(msg.Cols, msg.Rows)
-				}
 			}
 		}
 	}()

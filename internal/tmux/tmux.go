@@ -84,6 +84,40 @@ func (t Tmux) HasSession(session string) error {
 	return nil
 }
 
+// ClientSize is the size a client needs to show the session's current window
+// exactly: the window plus the status lines. A guest's client drawn at
+// another size gets tmux's dotted filler, or a cut-off window.
+func (t Tmux) ClientSize(session string) (int, int, error) {
+	out, err := t.run("display-message", "-p", "-t", pane(session), "#{window_width} #{window_height}")
+	if err != nil {
+		return 0, 0, err
+	}
+	var cols, rows int
+	if _, err := fmt.Sscanf(strings.TrimSpace(string(out)), "%d %d", &cols, &rows); err != nil || cols <= 0 || rows <= 0 {
+		return 0, 0, fmt.Errorf("tmux gave no window size for %q: %q", session, out)
+	}
+	return cols, rows + t.statusLines(session), nil
+}
+
+func (t Tmux) statusLines(session string) int {
+	value, _ := t.run("show-options", "-v", "-t", exact(session), "status")
+	if strings.TrimSpace(string(value)) == "" {
+		value, _ = t.run("show-options", "-gv", "status")
+	}
+	switch v := strings.TrimSpace(string(value)); v {
+	case "off":
+		return 0
+	case "on", "":
+		return 1
+	default:
+		var n int
+		if _, err := fmt.Sscanf(v, "%d", &n); err == nil && n > 0 {
+			return n
+		}
+		return 1
+	}
+}
+
 func (t Tmux) Version() (string, error) {
 	out, err := t.run("-V")
 	if err != nil {

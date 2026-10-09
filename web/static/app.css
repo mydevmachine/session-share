@@ -77,7 +77,8 @@ button.link:hover { color: var(--text); }
 
 .countdown { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-#terminal { flex: 1; min-height: 0; padding: 4px; }
+#terminal { flex: 1; min-height: 0; padding: 4px; overflow: hidden; }
+#terminal .xterm-viewport { overflow-y: hidden !important; }
 
 .overlay {
   position: fixed;

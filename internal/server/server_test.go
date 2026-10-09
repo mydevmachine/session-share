@@ -287,6 +287,25 @@ func TestASecondViewerIsRefusedByDefault(t *testing.T) {
 	}
 }
 
+func TestAViewerIsAlwaysTheSizeOfTheSharedWindow(t *testing.T) {
+	e := newEnv(t)
+	sh, password := e.share(t, share.ModeRead)
+	c := e.client(t)
+	e.login(t, c, sh.ID, password)
+	ws := e.dial(t, c, sh.ID)
+	defer ws.CloseNow()
+	readUntil(t, ws, "marker-on-screen")
+	send(t, ws, clientMessage{Type: "resize", Cols: 200, Rows: 60})
+	time.Sleep(300 * time.Millisecond)
+	if got := strings.TrimSpace(e.tmux(t, "list-clients", "-F", "#{client_width}x#{client_height}")); got != "80x25" {
+		t.Fatalf("viewer client is %s, want 80x25, the window and its status line: a bigger one gets tmux's dotted filler", got)
+	}
+	e.tmux(t, "resize-window", "-t", "=api:", "-x", "100", "-y", "30")
+	eventually(t, "the viewer to follow the window", func() bool {
+		return strings.TrimSpace(e.tmux(t, "list-clients", "-F", "#{client_width}x#{client_height}")) == "100x31"
+	})
+}
+
 func TestTheViewerIsDisconnectedWhenTheShareExpires(t *testing.T) {
 	e := newEnv(t)
 	sh, password := e.share(t, share.ModeRead)

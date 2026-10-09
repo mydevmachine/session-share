@@ -20,6 +20,7 @@ import (
 	"github.com/mydevmachine/session-share/internal/eventlog"
 	"github.com/mydevmachine/session-share/internal/share"
 	"github.com/mydevmachine/session-share/internal/termio"
+	"github.com/mydevmachine/session-share/internal/tmux"
 )
 
 const (
@@ -76,6 +77,8 @@ func Run(ctx context.Context, a *app.App, o Options) error {
 	}
 
 	tm := a.Tmux(sh)
+	guestCols, guestRows := cols, rows
+	cols, rows = fitTo(tm, sh.Session, guestCols, guestRows)
 	viewer, err := tm.Watch(sh.Session, cols, rows)
 	if err != nil {
 		return err
@@ -178,9 +181,17 @@ loop:
 			end("connection closed")
 		case <-winch:
 			if c, r, err := term.GetSize(fd); err == nil {
-				_ = viewer.Resize(c, r)
+				guestCols, guestRows = c, r
+				if c, r := fitTo(tm, sh.Session, guestCols, guestRows); c != cols || r != rows {
+					cols, rows = c, r
+					_ = viewer.Resize(cols, rows)
+				}
 			}
 		case <-ticker.C:
+			if c, r := fitTo(tm, sh.Session, guestCols, guestRows); c != cols || r != rows {
+				cols, rows = c, r
+				_ = viewer.Resize(cols, rows)
+			}
 			current, reason, err := a.Check(sh.ID)
 			switch {
 			case err != nil:
@@ -202,6 +213,17 @@ loop:
 	_ = log.Log("viewer_left", eventlog.Fields{"conn_id": connID, "kind": "ssh", "guest": o.Guest, "reason": why, "seconds": int(time.Since(started).Seconds()), "input_bytes": n})
 	_ = tm.Notify(sh.Session, fmt.Sprintf("session-share: %s left", o.Guest))
 	return nil
+}
+
+// fitTo never gives the guest's client more than the shared window: a bigger
+// client gets tmux's dotted filler. A smaller guest terminal keeps its size,
+// and tmux shows the part of the window around the cursor.
+func fitTo(tm tmux.Tmux, session string, guestCols, guestRows int) (int, int) {
+	cols, rows, err := tm.ClientSize(session)
+	if err != nil {
+		return guestCols, guestRows
+	}
+	return min(cols, guestCols), min(rows, guestRows)
 }
 
 func leaves(data []byte) bool {
